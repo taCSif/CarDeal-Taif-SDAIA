@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "saudi-used-car-deal-checker"
 version = "0.1.0"
@@ -11,6 +15,7 @@ dependencies = [
   "pandas>=2.2,<3",
   "scikit-learn>=1.5,<2",
   "joblib>=1.4,<2",
+  "psycopg[binary]>=3.2,<4",
 ]
 
 [project.optional-dependencies]
@@ -25,6 +30,7 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 addopts = "-q --strict-markers --cov=src/domain --cov=src/service --cov=src/adapters --cov=src/api --cov-branch --cov-report=term-missing --cov-fail-under=80"
 markers = ["integration: tests requiring the FastAPI application", "slow: slower tests"]
 
@@ -48,3 +54,13 @@ name = "Domain has no outer-layer dependencies"
 type = "forbidden"
 source_modules = ["src.domain"]
 forbidden_modules = ["src.service", "src.adapters", "src.api", "fastapi", "pydantic", "sklearn", "pandas", "requests", "sqlalchemy"]
+
+[[tool.importlinter.contracts]]
+name = "Service stays independent of adapters and API"
+type = "forbidden"
+source_modules = ["src.service"]
+forbidden_modules = ["src.adapters", "src.api", "fastapi", "sklearn", "pandas", "requests", "sqlalchemy"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]

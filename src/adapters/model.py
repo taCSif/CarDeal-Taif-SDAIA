@@ -23,7 +23,10 @@ class SklearnPriceModel:
         return cls(joblib.load(path))
 
     def warm_up(self) -> None:
-        sample = Vehicle("Toyota", "Camry", 2021, "Saudi", "White", "Full", 2.5, "Gas", "Automatic", 80000, "Riyadh")
+        sample = Vehicle(
+            "Toyota", "Camry", 2021, "Saudi", "White", "Full", 2.5,
+            "Gas", "Automatic", 80_000, "Riyadh",
+        )
         self.predict(sample)
 
     def predict(self, vehicle: Vehicle) -> float:
@@ -33,4 +36,7 @@ class SklearnPriceModel:
             "Engine_Size": vehicle.engine_size, "Fuel_Type": vehicle.fuel_type,
             "Gear_Type": vehicle.gear_type, "Mileage": vehicle.mileage, "Region": vehicle.region,
         }], columns=FEATURE_COLUMNS)
-        return float(self._pipeline.predict(frame)[0])
+        value = float(self._pipeline.predict(frame)[0])
+        if value <= 0:
+            raise ValueError("model returned a non-positive price")
+        return value
