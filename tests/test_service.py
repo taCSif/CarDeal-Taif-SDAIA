@@ -12,10 +12,7 @@ class FakeModel:
 
 
 def vehicle() -> Vehicle:
-    return Vehicle(
-        "Toyota", "Camry", 2021, "Saudi", "White", "Full", 2.5,
-        "Gas", "Automatic", 1, "Riyadh",
-    )
+    return Vehicle("Toyota Camry", 2021, 1)
 
 
 def test_service_orchestrates_model_and_policy() -> None:

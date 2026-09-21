@@ -9,10 +9,7 @@ class FixedModel:
 
 
 def vehicle() -> Vehicle:
-    return Vehicle(
-        "Toyota", "Camry", 2021, "Saudi", "White", "Full", 2.5,
-        "Gas", "Automatic", 80_000, "Riyadh",
-    )
+    return Vehicle("Toyota Camry", 2021, 80_000)
 
 
 def test_directional_behavior() -> None:
@@ -31,13 +28,7 @@ def test_metadata_trace_id_does_not_change_decision() -> None:
 
 
 def test_api_text_normalization_is_invariant_to_outer_whitespace() -> None:
-    base = {
-        "make": "Toyota", "type": "Camry", "year": 2021, "origin": "Saudi",
-        "color": "White", "options": "Full",
-        "engine_size": 2.5, "fuel_type": "Gas", "gear_type": "Automatic",
-        "mileage": 80_000, "region": "Riyadh", "asking_price": 72_000,
-    }
+    base = {"make_model": "Toyota Camry", "year": 2021, "mileage": 80_000, "asking_price": 72_000}
     normalized = PredictRequest(**base)
-    spaced = PredictRequest(**{**base, "make": " Toyota ", "type": " Camry "})
-    assert normalized.make == spaced.make == "Toyota"
-    assert normalized.type == spaced.type == "Camry"
+    spaced = PredictRequest(**{**base, "make_model": "  Toyota Camry  "})
+    assert normalized.make_model == spaced.make_model == "Toyota Camry"

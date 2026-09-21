@@ -9,9 +9,10 @@ for path in ("/health", "/ready"):
         print(path, response.status, response.read().decode())
 
 payload = {
-    "make":"Toyota","type":"Camry","year":2021,"origin":"Saudi","color":"White",
-    "options":"Full","engine_size":2.5,"fuel_type":"Gas","gear_type":"Automatic",
-    "mileage":80000,"region":"Riyadh","asking_price":72000,
+    "make_model":"Toyota Camry",
+    "year":2021,
+    "mileage":80000,
+    "asking_price":72000,
 }
 request = urllib.request.Request(
     base + "/v1/predict", data=json.dumps(payload).encode(),

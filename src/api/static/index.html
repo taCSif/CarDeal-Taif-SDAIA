@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CarDeal — Know the price. Spot the deal.</title>
+  <meta name="description" content="Estimate a Saudi used car's historical market price and compare it with the asking price.">
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#171a1f;background:#fff;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(180deg,#fff 0%,#f7f9fb 100%)}
+    .shell{width:min(960px,92vw);margin:0 auto;padding:42px 0 64px}.brand{display:flex;align-items:center;gap:12px;font-weight:750;letter-spacing:-.02em;font-size:20px}.mark{width:38px;height:38px;border:1px solid #e1e5e9;border-radius:12px;display:grid;place-items:center;background:#fff;box-shadow:0 5px 18px rgba(25,35,45,.06)}
+    .hero{max-width:720px;margin:72px auto 30px;text-align:center}.hero h1{font-size:clamp(38px,6vw,62px);line-height:1.02;letter-spacing:-.055em;margin:0 0 18px}.hero p{font-size:18px;color:#68717c;margin:0;line-height:1.6}
+    .card{background:#fff;border:1px solid #e4e8ec;border-radius:24px;box-shadow:0 20px 60px rgba(22,30,38,.08);padding:28px;max-width:720px;margin:0 auto}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.field{display:flex;flex-direction:column;gap:8px}.field.full{grid-column:1/-1}.label{font-size:13px;font-weight:650;color:#4e5761}.input{width:100%;height:52px;border:1px solid #dfe4e8;border-radius:13px;padding:0 15px;font:inherit;font-size:16px;outline:none;background:#fff;transition:.15s}.input:focus{border-color:#171a1f;box-shadow:0 0 0 3px rgba(23,26,31,.07)}.hint{font-size:12px;color:#8a929b}.button{margin-top:22px;width:100%;height:54px;border:0;border-radius:14px;background:#171a1f;color:#fff;font:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:.15s}.button:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(23,26,31,.18)}.button:disabled{opacity:.55;cursor:wait;transform:none;box-shadow:none}
+    .error{display:none;margin-top:14px;padding:12px 14px;border-radius:12px;background:#fff1f0;color:#a12b22;font-size:13px}.result{display:none;max-width:720px;margin:20px auto 0}.result-card{background:#fff;border:1px solid #e4e8ec;border-radius:24px;padding:28px}.decision{display:inline-flex;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:750;letter-spacing:.03em;background:#eef2f5}.decision.good{background:#e9f7ef;color:#176b3c}.decision.review{background:#fff7df;color:#7a5a00}.decision.poor{background:#fff0ef;color:#a12b22}.price{font-size:42px;letter-spacing:-.045em;font-weight:800;margin:12px 0 4px}.sub{color:#717a84;font-size:14px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:22px}.stat{padding:15px;background:#f7f8fa;border-radius:14px}.stat b{display:block;font-size:17px;margin-top:4px}.stat span{font-size:11px;color:#7d858e}.note{margin-top:18px;font-size:12px;line-height:1.6;color:#7b838c}.comparables{margin-top:24px}.comparables h3{font-size:14px;margin:0 0 10px}.comp{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid #eef0f2;font-size:13px}.footer{margin-top:26px;text-align:center;font-size:11px;color:#969da5}@media(max-width:650px){.shell{padding-top:25px}.hero{margin-top:52px}.grid,.stats{grid-template-columns:1fr}.field.full{grid-column:auto}.card,.result-card{padding:20px}.hero p{font-size:16px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="brand"><div class="mark" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 15.5h14l-1.2-5.2a2 2 0 0 0-1.95-1.55H8.15A2 2 0 0 0 6.2 10.3L5 15.5Z" stroke="currentColor" stroke-width="1.8"/><path d="M4 15.5v2.2M20 15.5v2.2M7.5 15.5h.01M16.5 15.5h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></div>CarDeal</div>
+    <section class="hero"><h1>Know the price.<br>Spot the deal.</h1><p>Enter four simple details to estimate a used car's historical Saudi listing price and see how the asking price compares.</p></section>
+    <form class="card" id="form" novalidate>
+      <div class="grid">
+        <div class="field full"><label class="label" for="make_model">Make &amp; Model</label><input class="input" id="make_model" name="make_model" placeholder="e.g. Toyota Camry" autocomplete="off" required><span class="hint">Use the make and model as listed in the dataset.</span></div>
+        <div class="field"><label class="label" for="year">Year</label><input class="input" id="year" name="year" type="number" min="1950" max="2026" placeholder="2021" required></div>
+        <div class="field"><label class="label" for="mileage">Mileage (km)</label><input class="input" id="mileage" name="mileage" type="number" min="0" max="2000000" placeholder="80000" required></div>
+        <div class="field full"><label class="label" for="asking_price">Asking price (SAR)</label><input class="input" id="asking_price" name="asking_price" type="number" min="1" max="10000000" step="1" placeholder="85000" required></div>
+      </div>
+      <button class="button" id="submit" type="submit">Check the deal →</button>
+      <div class="error" id="error" role="alert"></div>
+    </form>
+    <section class="result" id="result" aria-live="polite"><div class="result-card">
+      <span class="decision" id="decision"></span><div class="price" id="estimated"></div><div class="sub">Estimated historical listing price</div>
+      <div class="stats"><div class="stat"><span>Asking price</span><b id="asking"></b></div><div class="stat"><span>Difference</span><b id="difference"></b></div><div class="stat"><span>Difference %</span><b id="percentage"></b></div></div>
+      <p class="note">The ML model estimates price from vehicle details. A separate deterministic policy then compares that estimate with the asking price. The source data is historical 2021 Saudi listings, so this is not a live-market valuation.</p>
+      <div class="comparables" id="comparables"></div>
+    </div></section>
+    <div class="footer">CarDeal · ML estimate, not a professional appraisal.</div>
+  </main>
+<script>
+const form=document.getElementById('form'),btn=document.getElementById('submit'),error=document.getElementById('error'),result=document.getElementById('result');
+const sar=n=>new Intl.NumberFormat('en-SA',{maximumFractionDigits:0}).format(n)+' SAR';
+form.addEventListener('submit',async e=>{e.preventDefault();error.style.display='none';result.style.display='none';
+ const make_model=document.getElementById('make_model').value.trim(),year=Number(document.getElementById('year').value),mileage=Number(document.getElementById('mileage').value),asking_price=Number(document.getElementById('asking_price').value);
+ if(make_model.split(/\s+/).length<2||!Number.isInteger(year)||year<1950||year>2026||!Number.isInteger(mileage)||mileage<0||mileage>2000000||!Number.isFinite(asking_price)||asking_price<=0||asking_price>10000000){error.textContent='Please check the four fields and enter valid values.';error.style.display='block';return}
+ btn.disabled=true;btn.textContent='Checking…';
+ try{const r=await fetch('/v1/predict',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({make_model,year,mileage,asking_price})});const body=await r.json();if(!r.ok)throw new Error(body?.data?.error==='VALIDATION_ERROR'?'Please check your vehicle details.':body?.data?.error||'Unable to complete the estimate.');
+ const d=body.data;document.getElementById('estimated').textContent=sar(d.estimated_price);document.getElementById('asking').textContent=sar(d.asking_price);document.getElementById('difference').textContent=(d.difference_amount>=0?'+':'')+sar(d.difference_amount).replace(' SAR','')+' SAR';document.getElementById('percentage').textContent=(d.difference_percentage>=0?'+':'')+d.difference_percentage.toFixed(1)+'%';const pill=document.getElementById('decision');pill.textContent=d.decision.replace('_',' ');pill.className='decision '+d.decision.toLowerCase().replace('_','-');
+ const c=document.getElementById('comparables');c.innerHTML='';if(d.comparable_cars?.length){const h=document.createElement('h3');h.textContent='Historical comparables';c.appendChild(h);d.comparable_cars.forEach(x=>{const row=document.createElement('div');row.className='comp';row.innerHTML='<span>'+x.make_model+' · '+x.year+' · '+new Intl.NumberFormat('en-SA').format(x.mileage)+' km</span><strong>'+sar(x.price)+'</strong>';c.appendChild(row);});}result.style.display='block';result.scrollIntoView({behavior:'smooth',block:'start'});
+ }catch(err){error.textContent=err.message;error.style.display='block'}finally{btn.disabled=false;btn.textContent='Check the deal →'}});
+</script>
+</body></html>

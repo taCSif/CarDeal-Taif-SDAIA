@@ -10,17 +10,11 @@ class Decision(StrEnum):
 
 @dataclass(frozen=True)
 class Vehicle:
-    make: str
-    type: str
+    """User-facing vehicle identity and condition used by the price model."""
+
+    make_model: str
     year: int
-    origin: str
-    color: str
-    options: str
-    engine_size: float
-    fuel_type: str
-    gear_type: str
     mileage: int
-    region: str
 
 
 @dataclass(frozen=True)

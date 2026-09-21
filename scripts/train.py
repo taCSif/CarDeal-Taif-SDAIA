@@ -12,43 +12,35 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
-FEATURES = [
-    "Make", "Type", "Year", "Origin", "Color", "Options", "Engine_Size",
-    "Fuel_Type", "Gear_Type", "Mileage", "Region",
-]
-CATEGORICAL = ["Make", "Type", "Origin", "Color", "Options", "Fuel_Type", "Gear_Type", "Region"]
-NUMERIC = ["Year", "Engine_Size", "Mileage"]
+RAW_FEATURES = ["Make", "Type", "Year", "Mileage"]
+FEATURES = ["Make_Model", "Year", "Mileage"]
 TARGET = "Price"
 SEED = 42
 
 
 def load_and_clean(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path)
-    required = set(FEATURES + [TARGET])
+    required = set(RAW_FEATURES + [TARGET])
     missing = required - set(df.columns)
     if missing:
         raise ValueError(f"Missing required columns: {sorted(missing)}")
-    df = df[FEATURES + [TARGET]].copy()
-    for col in NUMERIC + [TARGET]:
+    df = df[RAW_FEATURES + [TARGET]].copy()
+    for col in ["Year", "Mileage", TARGET]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
-    df = df.dropna(subset=FEATURES + [TARGET])
-    # Price=0 represents a negotiable listing rather than a known target.
+    df = df.dropna(subset=RAW_FEATURES + [TARGET])
     df = df[(df["Price"] >= 5_000) & (df["Mileage"] <= 700_000)]
-    df = df[(df["Year"] >= 1950) & (df["Year"] <= 2025) & (df["Engine_Size"] > 0)]
-    for col in CATEGORICAL:
+    df = df[(df["Year"] >= 1950) & (df["Year"] <= 2025)]
+    for col in ["Make", "Type"]:
         df[col] = df[col].astype(str).str.strip()
-    df = df[(df[CATEGORICAL] != "").all(axis=1)]
-    return df.reset_index(drop=True)
+    df = df[(df[["Make", "Type"]] != "").all(axis=1)]
+    df["Make_Model"] = df["Make"] + " " + df["Type"]
+    return df[["Make_Model", "Year", "Mileage", TARGET]].reset_index(drop=True)
 
 
 def build_pipeline() -> Pipeline:
     prep = ColumnTransformer([
-        (
-            "cat",
-            OneHotEncoder(handle_unknown="ignore", min_frequency=2, sparse_output=False),
-            CATEGORICAL,
-        ),
-        ("num", "passthrough", NUMERIC),
+        ("cat", OneHotEncoder(handle_unknown="ignore", min_frequency=2, sparse_output=False), ["Make_Model"]),
+        ("num", "passthrough", ["Year", "Mileage"]),
     ])
     return Pipeline([
         ("preprocess", prep),
@@ -64,6 +56,7 @@ def main() -> None:
     artifact = artifact_dir / "price_model.joblib"
     if not data_path.exists():
         raise SystemExit(f"Dataset not found: {data_path}")
+    raw = pd.read_csv(data_path)
     df = load_and_clean(data_path)
     X_train, X_test, y_train, y_test = train_test_split(
         df[FEATURES], df[TARGET], test_size=0.2, random_state=SEED,
@@ -72,7 +65,7 @@ def main() -> None:
     pipeline.fit(X_train, y_train)
     pred = pipeline.predict(X_test)
     metrics = {
-        "source_rows": int(len(pd.read_csv(data_path))),
+        "source_rows": int(len(raw)),
         "rows_after_cleaning": int(len(df)),
         "train_rows": int(len(X_train)),
         "test_rows": int(len(X_test)),
@@ -87,6 +80,7 @@ def main() -> None:
     (artifact_dir / "metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
     (artifact_dir / "model_metadata.json").write_text(json.dumps({
         "features": FEATURES,
+        "public_inputs": ["make_model", "year", "mileage", "asking_price"],
         "target": TARGET,
         "model": "HistGradientBoostingRegressor",
         "training_seed": SEED,

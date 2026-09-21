@@ -9,4 +9,4 @@ class Settings(BaseSettings):
     model_version: str = "unknown"
     database_url: str | None = None
     log_level: str = "INFO"
-    model_config = SettingsConfigDict(env_prefix="DEAL_CHECKER_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="DEAL_CHECKER_", env_file=".env", extra="forbid")

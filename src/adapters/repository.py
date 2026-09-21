@@ -11,7 +11,7 @@ from src.service.predict import ComparableCar
 
 
 class ComparableCarsRepository:
-    """Read-only comparable listings produced by the training pipeline."""
+    """Read-only historical comparable listings produced by training."""
 
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -27,38 +27,32 @@ class ComparableCarsRepository:
 
     def find_similar(self, vehicle: Vehicle, limit: int = 5) -> list[ComparableCar]:
         df = self._load()
-        if df.empty:
+        if df.empty or limit <= 0:
             return []
+
         candidates = df.copy()
-        exact = (
-            (candidates["Make"] == vehicle.make)
-            & (candidates["Type"] == vehicle.type)
-            & (candidates["Gear_Type"] == vehicle.gear_type)
-        )
-        pool = candidates[exact]
-        if len(pool) < limit:
-            pool = candidates[candidates["Make"] == vehicle.make]
-        if len(pool) < limit:
-            pool = candidates
+        exact = candidates[candidates["Make_Model"].astype(str).str.casefold() == vehicle.make_model.casefold()]
+        pool = exact if len(exact) >= limit else candidates
         pool = pool.copy()
         pool["_distance"] = (
             (pool["Year"] - vehicle.year).abs() * 3
             + (pool["Mileage"] - vehicle.mileage).abs() / 100_000
-            + (pool["Engine_Size"] - vehicle.engine_size).abs() * 2
-            + (pool["Region"] != vehicle.region).astype(int) * 2
+            + (pool["Make_Model"].astype(str).str.casefold() != vehicle.make_model.casefold()).astype(int) * 10
         )
         rows = pool.nsmallest(limit, "_distance")
         return [
             ComparableCar(
-                make=str(row.Make), type=str(row.Type), year=int(row.Year),
-                mileage=int(row.Mileage), region=str(row.Region), price=float(row.Price),
+                make_model=str(row.Make_Model),
+                year=int(row.Year),
+                mileage=int(row.Mileage),
+                price=float(row.Price),
             )
             for row in rows.itertuples(index=False)
         ]
 
 
 class PostgresAuditRepository:
-    """Minimal audit sink; stores no vehicle identity or free-form request data."""
+    """Minimal audit sink; stores no full vehicle request."""
 
     def __init__(self, dsn: str) -> None:
         self.dsn = dsn

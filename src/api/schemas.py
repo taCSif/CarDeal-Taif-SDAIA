@@ -4,37 +4,28 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class PredictRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    make: str = Field(min_length=1, max_length=80)
-    type: str = Field(min_length=1, max_length=120)
+    """Minimal four-input public contract."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    make_model: str = Field(min_length=2, max_length=120)
     year: int = Field(ge=1950, le=2026)
-    origin: str = Field(min_length=1, max_length=40)
-    color: str = Field(min_length=1, max_length=40)
-    options: str = Field(min_length=1, max_length=40)
-    engine_size: float = Field(gt=0, le=15)
-    fuel_type: str = Field(min_length=1, max_length=40)
-    gear_type: str = Field(min_length=1, max_length=40)
     mileage: int = Field(ge=0, le=2_000_000)
-    region: str = Field(min_length=1, max_length=80)
     asking_price: float = Field(gt=0, le=10_000_000)
 
-    @field_validator(
-        "make", "type", "origin", "color", "options", "fuel_type", "gear_type", "region"
-    )
+    @field_validator("make_model")
     @classmethod
-    def strip_text(cls, value: str) -> str:
+    def validate_make_model(cls, value: str) -> str:
         value = value.strip()
-        if not value:
-            raise ValueError("must not be blank")
+        if not value or len(value.split()) < 2:
+            raise ValueError("must contain make and model, for example 'Toyota Camry'")
         return value
 
 
 class ComparableCarResponse(BaseModel):
-    make: str
-    type: str
+    make_model: str
     year: int
     mileage: int
-    region: str
     price: float
 
 

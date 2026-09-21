@@ -12,41 +12,24 @@ from src.adapters.settings import Settings
 from src.api.routes import create_app
 
 
-FEATURES = [
-    "Make", "Type", "Year", "Origin", "Color", "Options", "Engine_Size",
-    "Fuel_Type", "Gear_Type", "Mileage", "Region",
-]
+FEATURES = ["Make_Model", "Year", "Mileage"]
 
 
 def build_test_artifact(path: Path) -> None:
     model = Pipeline([
-        (
-            "preprocess",
-            ColumnTransformer([
-                ("cat", OneHotEncoder(handle_unknown="ignore"), [
-                    "Make", "Type", "Origin", "Color", "Options", "Fuel_Type",
-                    "Gear_Type", "Region",
-                ]),
-                ("num", "passthrough", ["Year", "Engine_Size", "Mileage"]),
-            ]),
-        ),
+        ("preprocess", ColumnTransformer([
+            ("cat", OneHotEncoder(handle_unknown="ignore"), ["Make_Model"]),
+            ("num", "passthrough", ["Year", "Mileage"]),
+        ])),
         ("model", DummyRegressor(strategy="constant", constant=100_000)),
     ])
-    x = pd.DataFrame([{
-        "Make": "Toyota", "Type": "Camry", "Year": 2021, "Origin": "Saudi",
-        "Color": "White", "Options": "Full", "Engine_Size": 2.5, "Fuel_Type": "Gas",
-        "Gear_Type": "Automatic", "Mileage": 80_000, "Region": "Riyadh",
-    }])
+    x = pd.DataFrame([{"Make_Model": "Toyota Camry", "Year": 2021, "Mileage": 80_000}])
     model.fit(x[FEATURES], [100_000])
     joblib.dump(model, path)
 
 
 def valid_payload() -> dict[str, object]:
-    return {
-        "make": "Toyota", "type": "Camry", "year": 2021, "origin": "Saudi",
-        "color": "White", "options": "Full", "engine_size": 2.5, "fuel_type": "Gas",
-        "gear_type": "Automatic", "mileage": 80_000, "region": "Riyadh", "asking_price": 105_000,
-    }
+    return {"make_model": "Toyota Camry", "year": 2021, "mileage": 80_000, "asking_price": 105_000}
 
 
 def test_schema_rejects_unknown_field() -> None:
@@ -74,6 +57,15 @@ def test_health_and_readiness_and_prediction(tmp_path: Path) -> None:
         assert response.json()["trace_id"] == "fixed-trace"
         assert response.json()["data"]["estimated_price"] == 100_000.0
         assert response.json()["data"]["decision"] == "GOOD_DEAL"
+
+
+def test_ui_is_served() -> None:
+    from src.api.routes import create_app
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.get("/")
+        assert response.status_code == 200
+        assert "Know the price" in response.text
 
 
 def test_validation_and_not_ready_are_unified(tmp_path: Path) -> None:

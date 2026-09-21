@@ -1,41 +1,58 @@
-# Saudi Used Car Deal Checker
+# CarDeal — Saudi Used Car Deal Checker
 
-An ML engineering service that estimates an expected used-car price from historical Saudi listings, then applies a deterministic business policy to classify an asking price as `GOOD_DEAL`, `REVIEW`, or `POOR_DEAL`.
+A production-style ML service that estimates a used car's historical Saudi listing price, then applies a deterministic policy to compare that estimate with the seller's asking price.
 
-## Important data limitation
-The source is the **Saudi Arabia Used Cars Dataset** from Kaggle/Syarah. The published dataset contains 8,248 listings and was collected in 2021. Predictions are therefore **estimates based on historical training data**, not guaranteed current Saudi market prices.
+> **Know the price. Spot the deal.**
+
+## User experience
+
+The public UI intentionally asks for only four things:
+
+1. **Make & Model**
+2. **Year**
+3. **Mileage**
+4. **Asking Price**
+
+The browser performs immediate validation, then sends the same contract to `POST /v1/predict`. The browser does **not** contain ML or deal-policy logic.
+
+```text
+CarDeal UI → FastAPI → PredictService → PriceModel + Deal Policy → response → UI
+```
+
+The model uses the first three inputs. Asking price is evaluated only after the ML estimate is produced.
+
+## Data limitation
+
+The source is the **Saudi Arabia Used Cars Dataset** from Kaggle/Syarah. The published dataset contains 8,248 listings and was collected in 2021. Predictions are estimates based on historical training data, not guaranteed current-market prices.
+
+Dataset source: `https://www.kaggle.com/datasets/turkibintalib/saudi-arabia-used-cars-dataset`
 
 ## Architecture
 
 ```text
-API (FastAPI)
-   ↓
-Service (use-case orchestration)
-   ↓
-Domain (pure decision rules + models)
-
-Adapters
-├── sklearn model artifact
-├── comparable-listings repository
-├── PostgreSQL audit repository
-└── typed settings
+src/
+├── domain/       pure vehicle + decision rules
+├── service/      use-case orchestration + Protocols
+├── adapters/     sklearn, repository, settings
+└── api/          FastAPI, validation, middleware, UI
 ```
 
 The domain does not import FastAPI, pandas, sklearn, or infrastructure. The service depends on a `PriceModel` Protocol, so the regression implementation can be replaced without changing the use case.
 
 ## ML approach
 
+- Public inputs used by the model: `Make_Model`, `Year`, `Mileage`.
 - Target: `Price`.
-- Features: `Make`, `Type`, `Year`, `Origin`, `Color`, `Options`, `Engine_Size`, `Fuel_Type`, `Gear_Type`, `Mileage`, `Region`.
-- Categorical features: one-hot encoding with unknown-category handling.
-- Numeric features: passed through.
+- `Make_Model` is derived from the dataset's `Make` + `Type` columns.
+- Categorical encoding: one-hot with unknown-category handling.
+- Numeric features: year and mileage.
 - Model: `HistGradientBoostingRegressor`.
 - Split: 80/20 held-out test split, seed `42`.
 - Metrics: MAE, RMSE, R².
-- `Price=0` rows are excluded because the dataset uses zero to represent negotiable listings rather than a known price.
-- Extreme/invalid records are removed according to the documented data-quality rules in `DECISIONS.md`.
+- `Price=0` rows are excluded because they do not represent a known target price.
+- Out-of-scope/invalid rows are removed according to the documented data-quality rules.
 
-Training is a separate command. The API never trains on startup.
+The API never trains on startup.
 
 ## Deal policy
 
@@ -47,9 +64,59 @@ premium <= 0.05          → GOOD_DEAL
 premium > 0.15            → POOR_DEAL
 ```
 
-The thresholds are engineering/domain policy constants, **not claims about Saudi market pricing**.
+These thresholds are application policy constants, not claims about Saudi market pricing.
 
-## Setup
+## Validation and API contract
+
+The backend is the authoritative validation boundary:
+
+- Pydantic strict request model
+- unknown fields rejected with `extra="forbid"`
+- make/model must contain at least two tokens
+- year: 1950–2026
+- mileage: 0–2,000,000 km
+- asking price: >0 and ≤10,000,000 SAR
+- whitespace normalization
+- unified trace-aware error envelopes
+
+### `GET /health`
+Liveness only.
+
+### `GET /ready`
+Returns `200` only after the model is loaded and warmed. Missing/corrupt artifacts leave the service alive but unready.
+
+### `POST /v1/predict`
+
+```json
+{
+  "make_model": "Toyota Camry",
+  "year": 2021,
+  "mileage": 80000,
+  "asking_price": 85000
+}
+```
+
+Successful responses use:
+
+```json
+{
+  "trace_id": "...",
+  "data": {
+    "estimated_price": 78000,
+    "asking_price": 85000,
+    "difference_amount": 7000,
+    "difference_percentage": 8.97,
+    "decision": "REVIEW",
+    "comparable_cars": []
+  }
+}
+```
+
+## Historical comparables
+
+Training saves cleaned historical listings as `artifacts/comparable_cars.csv`. The API can return up to five nearby historical listings using make/model, year, and mileage similarity. These are **not live marketplace results**.
+
+## Local setup
 
 ```bash
 python -m venv .venv
@@ -57,7 +124,7 @@ source .venv/bin/activate
 python -m pip install -e '.[dev]'
 ```
 
-Put the Kaggle CSV at:
+Place the public CSV at:
 
 ```text
 data/raw/saudi_used_cars.csv
@@ -71,7 +138,7 @@ make test
 make lint
 ```
 
-`make train` creates:
+Training creates:
 
 ```text
 artifacts/price_model.joblib
@@ -86,133 +153,73 @@ After an intentional model release, generate golden references explicitly:
 python scripts/generate_golden.py
 ```
 
-Review the file before committing it. Training and CI never regenerate it automatically.
+Review the changed values before committing. CI never regenerates golden references automatically.
 
-## API
-
-### `GET /health`
-Liveness only.
-
-### `GET /ready`
-Returns `200` only after the model is loaded and warmed. Returns `503` when the service is not ready.
-
-### `POST /v1/predict`
-
-Example request:
-
-```json
-{
-  "make": "Toyota",
-  "type": "Camry",
-  "year": 2021,
-  "origin": "Saudi",
-  "color": "White",
-  "options": "Full",
-  "engine_size": 2.5,
-  "fuel_type": "Gas",
-  "gear_type": "Automatic",
-  "mileage": 80000,
-  "region": "Riyadh",
-  "asking_price": 72000
-}
-```
-
-Response envelope:
-
-```json
-{
-  "trace_id": "...",
-  "data": {
-    "estimated_price": 66000,
-    "asking_price": 72000,
-    "difference_amount": 6000,
-    "difference_percentage": 9.09,
-    "decision": "REVIEW",
-    "comparable_cars": []
-  }
-}
-```
-
-Unknown fields, invalid mileage/year/price/engine values, and malformed requests are rejected with the same trace-aware envelope.
-
-## Comparable Cars extension
-
-The training pipeline saves the cleaned listings as a local artifact. The service can return up to five similar historical listings using make/type, transmission, year, mileage, engine size, and region similarity. This is an offline historical comparison, not a live marketplace search.
-
-## PostgreSQL integration
-
-Compose runs PostgreSQL as the supporting service. When `DEAL_CHECKER_DATABASE_URL` is configured, the app initializes a minimal `prediction_audit` table and records only trace ID, model version, price outputs, decision, and timestamp. It does not persist the full vehicle request.
-
-## Tests
-
-The suite covers:
-
-- decision thresholds and exact boundaries
-- invalid prices
-- service/model orchestration
-- model adapter load/warm-up/prediction
-- API liveness/readiness/prediction
-- validation and unknown fields
-- trace ID propagation
-- directional monotonicity as asking price increases
-- meaningful metadata invariance
-- input whitespace normalization
-- comparable-car retrieval
-- golden-reference behavior when an intentional golden artifact exists
-
-Run:
-
-```bash
-make test
-make fast-test
-```
-
-Coverage is enforced at 80% branch coverage across core source layers. The current environment's test suite passes with the local test artifact and reports coverage above the gate; real model evaluation still requires the dataset artifact.
-
-## Docker
-
-The image is multi-stage and runs as a non-root user. The container healthcheck targets `/ready`.
+## Docker / Compose
 
 ```bash
 make train
 make image
-```
-
-The image is intentionally blocked from building before a real model artifact exists; this prevents shipping a container that silently contains no trained model.
-
-## Compose
-
-```bash
 docker compose up --build
 ```
 
-The app waits for PostgreSQL to be healthy, then loads/warm-ups the model and becomes ready.
+The image is multi-stage, runs as a non-root user, and uses `/ready` as its healthcheck. Compose gates the API on a healthy PostgreSQL service. PostgreSQL is used only for a minimal prediction audit record when configured; the full vehicle request is not persisted.
+
+## Tests
+
+The test pyramid includes:
+
+- domain decision tests
+- service tests
+- API integration tests
+- validation/trace tests
+- UI route smoke test
+- real-model behavioral tests
+- intentional golden-reference test
+- adapter/comparable repository tests
+
+The real-model gate is marked `real_model` and requires a trained artifact. The behavioral suite checks policy directionality and model input stability. Golden values are never silently regenerated.
+
+```bash
+make test
+make fast-test
+python -m pytest -m real_model
+```
 
 ## CI/CD
 
-GitHub Actions performs:
+GitHub Actions follows:
 
-1. Ruff
-2. mypy
-3. import-linter
-4. pytest + coverage gate
-5. public Kaggle dataset download
-6. real model training
-7. Docker build
-8. readiness smoke test
-9. image-size gate (`<= 500 MB`)
-10. GHCR publish only for pushes to `main`
+```text
+quality
+  ├─ Ruff
+  ├─ mypy --strict
+  ├─ import-linter
+  └─ tests excluding real-model gate
+        ↓
+train release model from public dataset
+        ↓
+real-model behavior + golden tests
+        ↓
+Docker build
+        ↓
+readiness + API smoke
+        ↓
+image-size gate <= 500 MB
+        ↓
+publish to GHCR on main only, tagged by commit SHA
+```
 
-Published images are tagged with the Git commit SHA. No `latest` tag is published.
+No `latest` tag is published.
+
+## Security / configuration
+
+Configuration is typed with Pydantic Settings and unknown environment variables fail fast. Secrets are not stored in source code. Logs are structured JSON and correlate requests with `X-Trace-ID`; they do not log the vehicle payload.
 
 ## Benchmarks
 
-`BENCHMARKS.md` is updated only with measured values. Model metrics, Docker size, build time, test time, and training time are never fabricated.
+`BENCHMARKS.md` contains only measurements actually observed in the current environment or CI. Unmeasured Docker/model-release numbers are explicitly marked as such rather than fabricated.
 
-## Limitations
+## Engineering decisions
 
-- The source data is historical 2021 listing data.
-- The service estimates listing price; it is not a professional appraisal.
-- Current market changes after collection are not represented.
-- Rare vehicle configurations may have limited comparable historical listings.
-- Comparable cars are historical records, not live marketplace results.
+See `DECISIONS.md` for the five-plus key decisions covering the regression/policy split, four-input UX contract, model boundary, lifecycle, data quality, persistence, comparables, and golden references.

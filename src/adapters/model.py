@@ -6,10 +6,7 @@ import pandas as pd
 
 from src.domain.models import Vehicle
 
-FEATURE_COLUMNS = [
-    "Make", "Type", "Year", "Origin", "Color", "Options", "Engine_Size",
-    "Fuel_Type", "Gear_Type", "Mileage", "Region",
-]
+FEATURE_COLUMNS = ["Make_Model", "Year", "Mileage"]
 
 
 class SklearnPriceModel:
@@ -23,18 +20,13 @@ class SklearnPriceModel:
         return cls(joblib.load(path))
 
     def warm_up(self) -> None:
-        sample = Vehicle(
-            "Toyota", "Camry", 2021, "Saudi", "White", "Full", 2.5,
-            "Gas", "Automatic", 80_000, "Riyadh",
-        )
-        self.predict(sample)
+        self.predict(Vehicle("Toyota Camry", 2021, 80_000))
 
     def predict(self, vehicle: Vehicle) -> float:
         frame = pd.DataFrame([{
-            "Make": vehicle.make, "Type": vehicle.type, "Year": vehicle.year,
-            "Origin": vehicle.origin, "Color": vehicle.color, "Options": vehicle.options,
-            "Engine_Size": vehicle.engine_size, "Fuel_Type": vehicle.fuel_type,
-            "Gear_Type": vehicle.gear_type, "Mileage": vehicle.mileage, "Region": vehicle.region,
+            "Make_Model": vehicle.make_model,
+            "Year": vehicle.year,
+            "Mileage": vehicle.mileage,
         }], columns=FEATURE_COLUMNS)
         value = float(self._pipeline.predict(frame)[0])
         if value <= 0:

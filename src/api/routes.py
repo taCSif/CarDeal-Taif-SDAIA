@@ -3,6 +3,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse
 
 from src.adapters.model import SklearnPriceModel
 from src.adapters.repository import ComparableCarsRepository, PostgresAuditRepository
@@ -14,6 +15,7 @@ from src.domain.models import Vehicle
 from src.service.predict import PredictService
 
 router = APIRouter()
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 def get_service(request: Request) -> PredictService:
@@ -21,6 +23,11 @@ def get_service(request: Request) -> PredictService:
     if service is None:
         raise HTTPException(status_code=503, detail="NOT_READY")
     return service
+
+
+@router.get("/", include_in_schema=False)
+def index() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @router.get("/health")
@@ -40,10 +47,9 @@ def predict(
     payload: PredictRequest, service: PredictService = Depends(get_service)
 ) -> dict[str, object]:
     vehicle = Vehicle(
-        make=payload.make, type=payload.type, year=payload.year, origin=payload.origin,
-        color=payload.color, options=payload.options, engine_size=payload.engine_size,
-        fuel_type=payload.fuel_type, gear_type=payload.gear_type, mileage=payload.mileage,
-        region=payload.region,
+        make_model=payload.make_model,
+        year=payload.year,
+        mileage=payload.mileage,
     )
     assessment = service.predict(
         vehicle, payload.asking_price, trace_id_var.get(), service.model_version
@@ -78,12 +84,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.predict_service = service
             app.state.ready = True
         except Exception:
-            __import__("logging").getLogger("deal_checker").exception("startup_not_ready")
+            import logging
+            logging.getLogger("deal_checker").exception("startup_not_ready")
         yield
         app.state.ready = False
         app.state.predict_service = None
 
-    app = FastAPI(title="Saudi Used Car Deal Checker", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="CarDeal — Saudi Used Car Deal Checker", version="1.0.0", lifespan=lifespan)
     app.add_middleware(TraceMiddleware)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(HTTPException, http_error_handler)

@@ -32,7 +32,7 @@ dev = [
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q --strict-markers --cov=src/domain --cov=src/service --cov=src/adapters --cov=src/api --cov-branch --cov-report=term-missing --cov-fail-under=80"
-markers = ["integration: tests requiring the FastAPI application", "slow: slower tests"]
+markers = ["integration: tests requiring the FastAPI application", "slow: slower tests", "real_model: tests requiring the trained production model artifact"]
 
 [tool.ruff]
 line-length = 100

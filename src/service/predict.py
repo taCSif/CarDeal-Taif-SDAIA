@@ -11,11 +11,9 @@ class PriceModel(Protocol):
 
 @dataclass(frozen=True)
 class ComparableCar:
-    make: str
-    type: str
+    make_model: str
     year: int
     mileage: int
-    region: str
     price: float
 
 
