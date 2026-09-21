@@ -7,7 +7,10 @@ COPY scripts ./scripts
 COPY artifacts ./artifacts
 RUN python -m venv /opt/venv \
     && /opt/venv/bin/pip install --upgrade pip \
-    && /opt/venv/bin/pip install --no-cache-dir .
+    && /opt/venv/bin/pip install --no-cache-dir --no-compile . \
+    && /opt/venv/bin/pip uninstall -y pip setuptools \
+    && find /opt/venv -type d \( -name tests -o -name test \) -prune -exec rm -rf {} + \
+    && find /opt/venv -type d -name __pycache__ -prune -exec rm -rf {} +
 
 FROM python:3.11-slim AS runtime
 ENV PATH="/opt/venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
