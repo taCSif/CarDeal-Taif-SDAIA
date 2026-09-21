@@ -1,8 +1,10 @@
 .git
+.github
+.pytest_cache
 .venv
 __pycache__
-.pytest_cache
-.mypy_cache
-.ruff_cache
-data/raw
 *.pyc
+data/raw/*
+!data/raw/.gitkeep
+*.log
+.env

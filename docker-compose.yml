@@ -4,6 +4,9 @@ services:
     ports: ["8000:8000"]
     environment:
       DEAL_CHECKER_MODEL_PATH: /app/artifacts/price_model.joblib
+      DEAL_CHECKER_COMPARABLES_PATH: /app/artifacts/comparable_cars.csv
+      DEAL_CHECKER_MODEL_VERSION: ${DEAL_CHECKER_MODEL_VERSION:-local}
+      DEAL_CHECKER_DATABASE_URL: postgresql://dealchecker@postgres:5432/dealchecker
     depends_on:
       postgres:
         condition: service_healthy
@@ -11,13 +14,14 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready')"]
       interval: 10s
       timeout: 3s
+      start_period: 10s
       retries: 5
   postgres:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: dealchecker
-      POSTGRES_PASSWORD: dealchecker
       POSTGRES_DB: dealchecker
+      POSTGRES_HOST_AUTH_METHOD: trust
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dealchecker -d dealchecker"]
       interval: 5s
