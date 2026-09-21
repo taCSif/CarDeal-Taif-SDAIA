@@ -57,8 +57,15 @@
 **Trade-off:** These are 2021 historical records, not live listings.
 
 ## 9. Golden references are explicit
-**Decision:** Golden predictions are generated only by a separate command and reviewed intentionally.
+**Decision:** Golden predictions are generated only by a separate command (`scripts/generate_golden.py`) and reviewed intentionally. The golden test compares against them with a tight relative tolerance (`rel=1e-6`) rather than bit-exact equality.
 
-**Why:** Silent regeneration would make model regressions invisible.
+**Why:** Silent regeneration would make model regressions invisible. A genuine regression shifts predictions by far more than 1e-6, while cross-platform BLAS and scikit-learn patch differences can move only the final floating-point digits — bit-exact equality would produce false failures across environments without catching any real regression.
 
-**Trade-off:** A deliberate model release requires reviewing updated expected values.
+**Trade-off:** A deliberate model release requires reviewing updated expected values; the tolerance is deliberately far tighter than any change that would matter to a user.
+
+## 10. Input normalization boundary
+**Decision:** Pydantic strips outer whitespace and collapses internal whitespace runs in `make_model` (so `"Toyota   Camry"` → `"Toyota Camry"`), but preserves casing.
+
+**Why:** Whitespace normalization gives equivalent inputs one canonical representation. Casing is preserved because the model's one-hot categories are the dataset's own mixed-case labels (e.g. `"Toyota Camry"`, `"C300"`); lower/upper-casing user input would fail to match those categories and degrade predictions. Unseen categories are handled by `OneHotEncoder(handle_unknown="ignore")` at inference.
+
+**Trade-off:** A user typing a different case than the dataset uses will get the unknown-category path rather than an automatic case match; this is a deliberate accuracy-preserving choice, and the behavioral test asserts whitespace-variant inputs produce identical predictions.

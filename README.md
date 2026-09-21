@@ -23,9 +23,15 @@ The model uses the first three inputs. Asking price is evaluated only after the 
 
 ## Data limitation
 
-The source is the **Saudi Arabia Used Cars Dataset** from Kaggle/Syarah. The published dataset contains 8,248 listings and was collected in 2021. Predictions are estimates based on historical training data, not guaranteed current-market prices.
+The source is the **Saudi Arabia Used Cars Dataset** from Kaggle/Syarah, collected in **2021**. The cleaned English listings file (`UsedCarsSA_Clean_EN.csv`) contains **8,035 rows**; after the data-quality filtering below, **5,385 rows** remain for training. Predictions are **estimated historical market prices based on the 2021 training data**, not guaranteed current-market valuations.
 
 Dataset source: `https://www.kaggle.com/datasets/turkibintalib/saudi-arabia-used-cars-dataset`
+
+The Kaggle download API requires authentication even for public datasets. To fetch it locally or in CI, set `KAGGLE_USERNAME` and `KAGGLE_KEY` (CI reads them from repository secrets) and run:
+
+```bash
+bash scripts/fetch_dataset.sh   # writes data/raw/saudi_used_cars.csv
+```
 
 ## Architecture
 
@@ -53,6 +59,18 @@ The domain does not import FastAPI, pandas, sklearn, or infrastructure. The serv
 - Out-of-scope/invalid rows are removed according to the documented data-quality rules.
 
 The API never trains on startup.
+
+### Held-out metrics (measured locally, 2026-09-21, seed 42, sklearn 1.9.1)
+
+| Metric | Value |
+|---|---:|
+| Rows after cleaning | 5,385 |
+| Train / test rows | 4,308 / 1,077 |
+| MAE | 21,154.30 SAR |
+| RMSE | 39,622.45 SAR |
+| R² | 0.6916 |
+
+These reflect a deliberately small three-feature contract (`Make_Model`, `Year`, `Mileage`). R² ≈ 0.69 and a five-figure MAE are honest for this feature set on a heterogeneous national listings dataset; richer vehicle attributes would improve accuracy but were excluded by the four-input product decision (see `DECISIONS.md`). Current values live in `artifacts/metrics.json` after training.
 
 ## Deal policy
 
@@ -210,7 +228,7 @@ image-size gate <= 500 MB
 publish to GHCR on main only, tagged by commit SHA
 ```
 
-No `latest` tag is published.
+No `latest` tag is published. The dataset-download steps require `KAGGLE_USERNAME` and `KAGGLE_KEY` repository secrets; without them the `docker` and `publish` jobs cannot fetch the dataset and will fail fast with a clear error.
 
 ## Security / configuration
 
