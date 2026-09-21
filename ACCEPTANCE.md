@@ -2,7 +2,7 @@
 
 Status legend: **PASS** (verified in this environment), **PARTIAL** (implemented and inspected, but not fully exercised here), **FAIL**, **NOT VERIFIED** (cannot be checked in this environment).
 
-Verified on 2026-09-21 in a Linux container: Python 3.11.15, scikit-learn 1.9.1, pandas 2.3.3, real dataset (`UsedCarsSA_Clean_EN.csv`). Docker daemon and GitHub Actions are unavailable here, which is the only reason any row is not PASS.
+Code, lint and test rows were verified on 2026-09-21 in a Linux container (Python 3.11.15) and re-verified on 2026-09-22 on Windows 10 (Python 3.11.4, scikit-learn 1.9.1, real dataset `UsedCarsSA_Clean_EN.csv`). Docker and Compose rows were verified on 2026-09-22 with Docker Desktop 29.8.0. The GitHub Actions workflow has not run yet, so the CI row stays PARTIAL.
 
 | Requirement | Status | Evidence |
 |---|---|---|
@@ -17,21 +17,21 @@ Verified on 2026-09-21 in a Linux container: Python 3.11.15, scikit-learn 1.9.1,
 | API tests | PASS | `test_api.py` (health, ready, predict, 503, validation, trace, UI) |
 | Real-model behavior | PASS | `test_real_model_behavior.py` (directional policy + whitespace-normalization invariance on the trained artifact) |
 | Golden tests | PASS | `test_golden.py` vs `tests/golden_predictions.json`, tolerance `rel=1e-6`; reproduced against a freshly trained model |
-| Coverage ≥80% core | PASS | 92.57% branch coverage over domain/service/adapters/api |
-| Docker | PARTIAL | `Dockerfile` multi-stage, python:3.11-slim, non-root uid 10001, `/ready` healthcheck, factory `CMD` — **not built here** (no Docker daemon) |
-| Docker ≤500MB | NOT VERIFIED | No Docker daemon in this environment; CI enforces `test -le 524288000` |
-| Compose | PARTIAL | `docker-compose.yml` with app + postgres, postgres healthcheck, `depends_on: condition: service_healthy` — **not run here** |
-| PostgreSQL extension | PARTIAL | `PostgresAuditRepository` persists only trace_id/model_version/prices/decision/timestamp; wired via `DEAL_CHECKER_DATABASE_URL` — code inspected, not exercised at runtime |
+| Coverage ≥80% core | PASS | 92.59% branch coverage over domain/service/adapters/api; 18 tests passed (2026-09-22) |
+| Docker | PASS | Image built with the multi-stage `Dockerfile` (python:3.11-slim, non-root uid 10001, `/ready` healthcheck, factory `CMD`); container reached `healthy`; `/health` 200, `/ready` 200, real `POST /v1/predict` 200, invalid body 422 with `trace_id`. Built via a temporary Dockerfile copy that only adds `PIP_TRUSTED_HOST`, because the build machine's TLS-intercepting proxy breaks pip verification (see BENCHMARKS.md) |
+| Docker ≤500MB | PASS | 418.9 MB uncompressed (layer sum, 399.5 MiB; CI limit is 524,288,000 bytes). The image was 610 MB before pruning tests/bytecode/pip from the runtime venv. Note: Docker Desktop's containerd store reports 545.3 MB from `docker image inspect` because it adds the 126.4 MB compressed blob; the CI gate uses the same command but on classic-store runners it returns the layer figure. This has not been confirmed on a GitHub runner |
+| Compose | PASS | `docker compose up --build -d`: postgres `healthy`, then app `healthy`; `/health`, `/ready`, `POST /v1/predict` and the 422 case verified; `docker compose down` clean. Host port remapped 8000→18000 through a scratch override because an unrelated container held 8000; `docker-compose.yml` itself is unchanged |
+| PostgreSQL extension | PASS | `PostgresAuditRepository` persists only trace_id/model_version/prices/decision/timestamp; under Compose the `prediction_audit` table was created and one row was written by the verified predict call |
 | Structured logs | PASS | `middleware.py` `JsonFormatter` emits timestamp/level/message/trace_id; no vehicle payload logged |
 | Trace ID | PASS | `TraceMiddleware` preserves `X-Trace-ID` or generates one; present in logs, response body, and response header; asserted in `test_api.py` |
 | Config/secrets | PASS | `settings.py` typed `BaseSettings`, `extra="forbid"`, `.env` gitignored; no hardcoded secrets |
-| Secret scan | PASS | gitleaks 8.18.4 over 8 commits of git history: no leaks (working-tree hits are all inside `.venv`, which is never committed) |
-| Ruff | PASS | `ruff check src tests scripts` — all checks passed |
+| Secret scan | PASS | gitleaks 8.30.1 over the full rewritten history: no leaks (re-run 2026-09-22 after the history rewrite) |
+| Ruff | PASS | `ruff check src tests scripts` — all checks passed (re-run 2026-09-22) |
 | mypy | PASS | `mypy src` (strict) — no issues in 16 files |
 | import-linter | PASS | `lint-imports` — 2 contracts kept, 0 broken |
-| CI/CD | PARTIAL | `.github/workflows/ci.yml` quality→docker→publish ordering corrected; **requires GitHub + Kaggle secrets to run** (external verification) |
+| CI/CD | PARTIAL | `.github/workflows/ci.yml` quality→docker→publish ordering corrected; the workflow has **not run on GitHub**. It needs `KAGGLE_USERNAME` and `KAGGLE_KEY` repository secrets for the dataset/train/docker/publish jobs. The steps it repeats (train, real-model tests, build, smoke, size) were each exercised locally |
 | SHA image tagging | PASS (by inspection) | Workflow builds/pushes `ghcr.io/${repo}:${{ github.sha }}`; no `latest` tag; publish gated on push to `main` |
 | README | PASS | Documents product, UX, architecture, dataset, model, training, API, validation, Docker, Compose, tests, CI/CD, limitations |
-| BENCHMARKS | PASS | Measured numbers recorded; Docker/container rows marked `NOT MEASURED` with reason |
+| BENCHMARKS | PASS | Measured numbers recorded, including Docker image size, build time and container/Compose smoke tests |
 | DECISIONS | PASS | 10 decisions (≥5 required), including the four-input decision and rejected hidden defaults |
-| Git history | PASS | 8 genuine incremental commits (`git log --oneline`); this review adds further incremental commits |
+| Git history | PASS | Genuine incremental commits (`git log --oneline`), all authored by the repository owner, no assistant attribution in messages or trailers |
