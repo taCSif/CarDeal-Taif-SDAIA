@@ -1,0 +1,40 @@
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class PredictRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    make: str = Field(min_length=1, max_length=80)
+    type: str = Field(min_length=1, max_length=120)
+    year: int = Field(ge=1950, le=2100)
+    origin: str = Field(min_length=1, max_length=40)
+    color: str = Field(min_length=1, max_length=40)
+    options: str = Field(min_length=1, max_length=40)
+    engine_size: float = Field(gt=0, le=15)
+    fuel_type: str = Field(min_length=1, max_length=40)
+    gear_type: str = Field(min_length=1, max_length=40)
+    mileage: int = Field(ge=0, le=2_000_000)
+    region: str = Field(min_length=1, max_length=80)
+    asking_price: float = Field(gt=0, le=10_000_000)
+
+    @field_validator("make", "type", "origin", "color", "options", "fuel_type", "gear_type", "region")
+    @classmethod
+    def strip_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be blank")
+        return value
+
+
+class PredictionData(BaseModel):
+    estimated_price: float
+    asking_price: float
+    difference_amount: float
+    difference_percentage: float
+    decision: str
+
+
+class Envelope(BaseModel):
+    trace_id: str
+    data: Any

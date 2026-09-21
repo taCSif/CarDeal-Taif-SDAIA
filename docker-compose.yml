@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      DEAL_CHECKER_MODEL_PATH: /app/artifacts/price_model.joblib
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: dealchecker
+      POSTGRES_PASSWORD: dealchecker
+      POSTGRES_DB: dealchecker
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dealchecker -d dealchecker"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
