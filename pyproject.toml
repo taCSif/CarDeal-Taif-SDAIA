@@ -40,6 +40,9 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+# B008 is the intended FastAPI dependency-injection pattern (Depends in defaults);
+# routes use the Annotated form, but keep this scoped ignore documented for clarity.
+per-file-ignores = { "tests/*" = ["E501"] }
 
 [tool.mypy]
 python_version = "3.11"
@@ -48,6 +51,7 @@ ignore_missing_imports = true
 
 [tool.importlinter]
 root_package = "src"
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Domain has no outer-layer dependencies"

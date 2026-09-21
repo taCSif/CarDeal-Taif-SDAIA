@@ -38,8 +38,9 @@ def load_and_clean(path: Path) -> pd.DataFrame:
 
 
 def build_pipeline() -> Pipeline:
+    encoder = OneHotEncoder(handle_unknown="ignore", min_frequency=2, sparse_output=False)
     prep = ColumnTransformer([
-        ("cat", OneHotEncoder(handle_unknown="ignore", min_frequency=2, sparse_output=False), ["Make_Model"]),
+        ("cat", encoder, ["Make_Model"]),
         ("num", "passthrough", ["Year", "Mileage"]),
     ])
     return Pipeline([

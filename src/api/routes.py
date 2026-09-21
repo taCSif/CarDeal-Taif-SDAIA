@@ -1,5 +1,7 @@
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -19,10 +21,13 @@ STATIC_DIR = Path(__file__).parent / "static"
 
 
 def get_service(request: Request) -> PredictService:
-    service = getattr(request.app.state, "predict_service", None)
+    service: PredictService | None = getattr(request.app.state, "predict_service", None)
     if service is None:
         raise HTTPException(status_code=503, detail="NOT_READY")
     return service
+
+
+ServiceDependency = Annotated[PredictService, Depends(get_service)]
 
 
 @router.get("/", include_in_schema=False)
@@ -43,9 +48,7 @@ def ready(request: Request) -> dict[str, object]:
 
 
 @router.post("/v1/predict")
-def predict(
-    payload: PredictRequest, service: PredictService = Depends(get_service)
-) -> dict[str, object]:
+def predict(payload: PredictRequest, service: ServiceDependency) -> dict[str, object]:
     vehicle = Vehicle(
         make_model=payload.make_model,
         year=payload.year,
@@ -67,7 +70,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     configure_logging(settings.log_level)
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI):
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.ready = False
         app.state.predict_service = None
         try:

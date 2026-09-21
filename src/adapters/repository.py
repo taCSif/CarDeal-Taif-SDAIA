@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -31,13 +31,16 @@ class ComparableCarsRepository:
             return []
 
         candidates = df.copy()
-        exact = candidates[candidates["Make_Model"].astype(str).str.casefold() == vehicle.make_model.casefold()]
+        target = vehicle.make_model.casefold()
+        make_model_cf = candidates["Make_Model"].astype(str).str.casefold()
+        exact = candidates[make_model_cf == target]
         pool = exact if len(exact) >= limit else candidates
         pool = pool.copy()
+        pool_make_model_cf = pool["Make_Model"].astype(str).str.casefold()
         pool["_distance"] = (
             (pool["Year"] - vehicle.year).abs() * 3
             + (pool["Mileage"] - vehicle.mileage).abs() / 100_000
-            + (pool["Make_Model"].astype(str).str.casefold() != vehicle.make_model.casefold()).astype(int) * 10
+            + (pool_make_model_cf != target).astype(int) * 10
         )
         rows = pool.nsmallest(limit, "_distance")
         return [
@@ -85,7 +88,7 @@ class PostgresAuditRepository:
                 (
                     trace_id, model_version, assessment.estimated_price,
                     assessment.asking_price, assessment.decision.value,
-                    datetime.now(timezone.utc),
+                    datetime.now(UTC),
                 ),
             )
             conn.commit()
