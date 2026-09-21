@@ -1,0 +1,26 @@
+[
+  {
+    "features": {
+      "make_model": "Toyota Camry",
+      "year": 2021,
+      "mileage": 80000
+    },
+    "estimated_price": 75261.83674823013
+  },
+  {
+    "features": {
+      "make_model": "Hyundai Elantra",
+      "year": 2019,
+      "mileage": 100000
+    },
+    "estimated_price": 45581.58290556834
+  },
+  {
+    "features": {
+      "make_model": "Nissan Patrol",
+      "year": 2016,
+      "mileage": 90000
+    },
+    "estimated_price": 138908.62182096648
+  }
+]
