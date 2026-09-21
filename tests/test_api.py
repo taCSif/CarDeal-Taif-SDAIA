@@ -2,7 +2,9 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
+import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 from sklearn.compose import ColumnTransformer
 from sklearn.dummy import DummyRegressor
 from sklearn.pipeline import Pipeline
@@ -10,7 +12,7 @@ from sklearn.preprocessing import OneHotEncoder
 
 from src.adapters.settings import Settings
 from src.api.routes import create_app
-
+from src.api.schemas import PredictRequest
 
 FEATURES = ["Make_Model", "Year", "Mileage"]
 
@@ -33,11 +35,34 @@ def valid_payload() -> dict[str, object]:
 
 
 def test_schema_rejects_unknown_field() -> None:
-    from src.api.schemas import PredictRequest
-    import pytest
-
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         PredictRequest(**valid_payload(), extra="x")
+
+
+def test_schema_rejects_single_token_make_model() -> None:
+    with pytest.raises(ValidationError):
+        PredictRequest(**{**valid_payload(), "make_model": "Toyota"})
+
+
+def test_custom_validator_error_returns_422_not_500(tmp_path: Path) -> None:
+    # Regression: a custom field-validator failure (single-token make_model) must
+    # produce a serializable 422 envelope, not crash the error handler into a 500.
+    artifact = tmp_path / "model.joblib"
+    build_test_artifact(artifact)
+    app = create_app(Settings(model_path=artifact, comparables_path=tmp_path / "none.csv"))
+    with TestClient(app) as client:
+        response = client.post("/v1/predict", json={**valid_payload(), "make_model": "Toyota"})
+        assert response.status_code == 422
+        assert response.json()["data"]["error"] == "VALIDATION_ERROR"
+        assert response.json()["data"]["details"][0]["loc"] == ["body", "make_model"]
+
+
+def test_predict_returns_503_when_not_ready(tmp_path: Path) -> None:
+    app = create_app(Settings(model_path=tmp_path / "missing.joblib"))
+    with TestClient(app) as client:
+        response = client.post("/v1/predict", json=valid_payload())
+        assert response.status_code == 503
+        assert response.json()["data"]["error"] == "NOT_READY"
 
 
 def test_health_and_readiness_and_prediction(tmp_path: Path) -> None:

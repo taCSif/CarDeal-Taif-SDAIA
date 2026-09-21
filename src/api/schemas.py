@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -16,7 +17,11 @@ class PredictRequest(BaseModel):
     @field_validator("make_model")
     @classmethod
     def validate_make_model(cls, value: str) -> str:
-        value = value.strip()
+        # Collapse any run of internal whitespace to a single space so that
+        # "Toyota   Camry" and "Toyota Camry" resolve to the same model input.
+        # Casing is deliberately preserved to match the dataset's category
+        # labels; unseen categories are handled by the encoder at inference.
+        value = re.sub(r"\s+", " ", value.strip())
         if not value or len(value.split()) < 2:
             raise ValueError("must contain make and model, for example 'Toyota Camry'")
         return value
