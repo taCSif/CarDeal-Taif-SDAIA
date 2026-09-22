@@ -74,3 +74,11 @@ and riskier change than the scope of this audit. Instead,
 against the real artifact, documents the limitation in the test output, and
 would fail loudly (`XPASS`) if a future retrain accidentally fixed it
 without updating this document.
+
+## Future Work
+
+- Model accuracy: add more vehicle features (engine size, options, region) and stronger regularization to reduce the ~21k SAR MAE and category overfitting.
+- Mileage monotonicity: retrain with monotonic_cst and regenerate golden references with justification, turning the documented xfail into a passing invariant.
+- Risk signal: add a "suspiciously low price" flag when asking price is far below the estimate.
+- Live data: replace the 2021 historical dataset with a current market feed.
+- Branch protection: add a second maintainer, set required_approving_review_count 1 and enforce_admins true.
