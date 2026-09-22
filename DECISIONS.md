@@ -69,3 +69,17 @@
 **Why:** Whitespace normalization gives equivalent inputs one canonical representation. Casing is preserved because the model's one-hot categories are the dataset's own mixed-case labels (e.g. `"Toyota Camry"`, `"C300"`); lower/upper-casing user input would fail to match those categories and degrade predictions. Unseen categories are handled by `OneHotEncoder(handle_unknown="ignore")` at inference.
 
 **Trade-off:** A user typing a different case than the dataset uses will get the unknown-category path rather than an automatic case match; this is a deliberate accuracy-preserving choice, and the behavioral test asserts whitespace-variant inputs produce identical predictions.
+
+## 11. GET /v1/comparables extension
+**Decision:** Promote the comparables lookup already embedded in `POST /v1/predict`'s response to its own `GET /v1/comparables` endpoint, reusing `ComparableCarsRepository` unchanged, instead of adding a batch-predict endpoint or a model-info endpoint.
+
+**Why:** The repository and its "closest 5" logic already existed and were already tested (`tests/test_adapters.py`); exposing it directly needed no new adapter, no new persistence, and no batch-size/partial-failure semantics to design. It also gives a caller a way to see comparable listings without having to supply (or care about) an asking price, which `POST /v1/predict` requires. The shared `make_model`/`year`/`mileage` validation was extracted from `PredictRequest` into a `VehicleFields` base so both endpoints enforce identical `extra="forbid"` and range rules.
+
+**Trade-off:** Two endpoints now return overlapping data (`POST /v1/predict`'s `comparable_cars` field is unchanged, for backward compatibility with existing tests and the UI); a client wanting both the estimate and comparables in one round trip still calls predict, not this endpoint.
+
+## 12. Documented, not silently dropped, model non-monotonicity
+**Decision:** `tests/test_behavioural_model.py::test_higher_mileage_never_increases_price` is kept in the suite as a strict `xfail`, backed by `docs/model_limitations.md`, rather than being omitted or written to pass.
+
+**Why:** The invariant was checked against the real trained artifact before writing any assertion (see `docs/model_limitations.md`): scripts/train.py's `HistGradientBoostingRegressor` has no `monotonic_cst` on `Mileage`, and an empirical sweep found 42 non-monotonic transitions out of 198 on sparse make_model/year slices. Writing the test to silently pass, or leaving it out, would misrepresent a real model property.
+
+**Trade-off:** Fixing this properly means retraining with a monotonic constraint, which would change every prediction and require regenerating `tests/golden_predictions.json` with its own written justification (see decision #9) — a materially larger, riskier change than this audit's scope. `tests/golden_predictions.json` is therefore left unchanged here.
