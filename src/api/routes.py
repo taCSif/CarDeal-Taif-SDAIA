@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse
 
@@ -12,7 +12,7 @@ from src.adapters.repository import ComparableCarsRepository, PostgresAuditRepos
 from src.adapters.settings import Settings
 from src.api.errors import generic_error_handler, http_error_handler, validation_error_handler
 from src.api.middleware import TraceMiddleware, configure_logging, trace_id_var
-from src.api.schemas import PredictRequest
+from src.api.schemas import ComparablesQuery, PredictRequest
 from src.domain.models import Vehicle
 from src.service.predict import PredictService
 
@@ -62,6 +62,16 @@ def predict(payload: PredictRequest, service: ServiceDependency) -> dict[str, ob
         "decision": assessment.decision.value,
         "comparable_cars": [car.__dict__ for car in comparables],
     }
+    return {"trace_id": trace_id_var.get(), "data": data}
+
+
+@router.get("/v1/comparables")
+def comparables(
+    query: Annotated[ComparablesQuery, Query()], service: ServiceDependency
+) -> dict[str, object]:
+    vehicle = Vehicle(make_model=query.make_model, year=query.year, mileage=query.mileage)
+    cars = service.comparables(vehicle)
+    data = {"comparable_cars": [car.__dict__ for car in cars]}
     return {"trace_id": trace_id_var.get(), "data": data}
 
 

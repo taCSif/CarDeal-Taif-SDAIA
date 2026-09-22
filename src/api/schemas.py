@@ -4,15 +4,19 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class PredictRequest(BaseModel):
-    """Minimal four-input public contract."""
+class VehicleFields(BaseModel):
+    """Shared make_model/year/mileage validation for the four-input contract.
+
+    POST /v1/predict (PredictRequest) and GET /v1/comparables (ComparablesQuery)
+    both identify a vehicle the same way; this base keeps that identification
+    and its normalization in one place.
+    """
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     make_model: str = Field(min_length=2, max_length=120)
     year: int = Field(ge=1950, le=2026)
     mileage: int = Field(ge=0, le=2_000_000)
-    asking_price: float = Field(gt=0, le=10_000_000)
 
     @field_validator("make_model")
     @classmethod
@@ -25,6 +29,17 @@ class PredictRequest(BaseModel):
         if not value or len(value.split()) < 2:
             raise ValueError("must contain make and model, for example 'Toyota Camry'")
         return value
+
+
+class PredictRequest(VehicleFields):
+    """Minimal four-input public contract."""
+
+    asking_price: float = Field(gt=0, le=10_000_000)
+
+
+class ComparablesQuery(VehicleFields):
+    """Query parameters for GET /v1/comparables: the same three vehicle fields
+    used by PredictRequest, minus asking_price."""
 
 
 class ComparableCarResponse(BaseModel):
