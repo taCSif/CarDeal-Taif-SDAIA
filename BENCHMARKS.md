@@ -32,4 +32,4 @@ Docker-related notes:
 - Host port 8000 was occupied by an unrelated container, so the runs used host port 18000 mapped to container port 8000.
 - Test-suite timings differ between the Linux (3.01 s) and Windows (58.9 s) rows because they were measured on different machines; they are not comparable with each other.
 
-CI is configured to reproduce the full release path on GitHub-hosted runners: download the dataset (with Kaggle secrets), train the model, run real-model behavior/golden tests, build the image, run readiness/API smoke tests, and enforce the 500 MB image-size limit. That workflow has not yet run on GitHub; it needs `KAGGLE_USERNAME` and `KAGGLE_KEY` repository secrets.
+CI is configured to reproduce the full release path on GitHub-hosted runners: train the model from the committed dataset, run real-model behavior/golden tests, build the image, run readiness/API smoke tests, and enforce the 500 MB image-size limit. No repository secrets are required.

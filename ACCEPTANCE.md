@@ -29,7 +29,7 @@ Code, lint and test rows were verified on 2026-09-21 in a Linux container (Pytho
 | Ruff | PASS | `ruff check src tests scripts` — all checks passed (re-run 2026-09-22) |
 | mypy | PASS | `mypy src` (strict) — no issues in 16 files |
 | import-linter | PASS | `lint-imports` — 2 contracts kept, 0 broken |
-| CI/CD | PARTIAL | `.github/workflows/ci.yml` quality→docker→publish ordering corrected; the workflow has **not run on GitHub**. It needs `KAGGLE_USERNAME` and `KAGGLE_KEY` repository secrets for the dataset/train/docker/publish jobs. The steps it repeats (train, real-model tests, build, smoke, size) were each exercised locally |
+| CI/CD | PARTIAL | `.github/workflows/ci.yml` quality→docker→publish ordering corrected. The dataset is committed at `data/raw/saudi_used_cars.csv`, so no repository secrets are required to run any job. The steps it repeats (train, real-model tests, build, smoke, size) were each exercised locally; see the Actions run linked in the project history for the on-GitHub result |
 | SHA image tagging | PASS (by inspection) | Workflow builds/pushes `ghcr.io/${repo}:${{ github.sha }}`; no `latest` tag; publish gated on push to `main` |
 | README | PASS | Documents product, UX, architecture, dataset, model, training, API, validation, Docker, Compose, tests, CI/CD, limitations |
 | BENCHMARKS | PASS | Measured numbers recorded, including Docker image size, build time and container/Compose smoke tests |

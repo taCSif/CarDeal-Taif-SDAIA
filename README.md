@@ -27,10 +27,10 @@ The source is the **Saudi Arabia Used Cars Dataset** from Kaggle/Syarah, collect
 
 Dataset source: `https://www.kaggle.com/datasets/turkibintalib/saudi-arabia-used-cars-dataset`
 
-The Kaggle download API requires authentication even for public datasets. To fetch it locally or in CI, set `KAGGLE_USERNAME` and `KAGGLE_KEY` (CI reads them from repository secrets) and run:
+The cleaned CSV is committed at `data/raw/saudi_used_cars.csv` (~660 KB, public data), so `python scripts/train.py` and CI both read it directly with no download step and no credentials. To refresh it from Kaggle instead — the Kaggle download API requires authentication even for public datasets — set `KAGGLE_USERNAME` and `KAGGLE_KEY` and run:
 
 ```bash
-bash scripts/fetch_dataset.sh   # writes data/raw/saudi_used_cars.csv
+bash scripts/fetch_dataset.sh   # overwrites data/raw/saudi_used_cars.csv
 ```
 
 ## Architecture
@@ -228,7 +228,7 @@ image-size gate <= 500 MB
 publish to GHCR on main only, tagged by commit SHA
 ```
 
-No `latest` tag is published. The dataset-download steps require `KAGGLE_USERNAME` and `KAGGLE_KEY` repository secrets; without them the `docker` and `publish` jobs cannot fetch the dataset and will fail fast with a clear error.
+No `latest` tag is published. The `docker` and `publish` jobs train from the committed `data/raw/saudi_used_cars.csv` and need no repository secrets to run.
 
 ## Security / configuration
 
