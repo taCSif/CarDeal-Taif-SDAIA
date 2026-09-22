@@ -1,5 +1,7 @@
 # CarDeal — Saudi Used Car Deal Checker
 
+[![CI](https://github.com/taCSif/CarDeal-Taif-SDAIA/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/taCSif/CarDeal-Taif-SDAIA/actions/workflows/ci.yml)
+
 A production-style ML service that estimates a used car's historical Saudi listing price, then applies a deterministic policy to compare that estimate with the seller's asking price.
 
 > **Know the price. Spot the deal.**
@@ -130,9 +132,26 @@ Successful responses use:
 }
 ```
 
-## Historical comparables
+### `GET /v1/comparables`
 
-Training saves cleaned historical listings as `artifacts/comparable_cars.csv`. The API can return up to five nearby historical listings using make/model, year, and mileage similarity. These are **not live marketplace results**.
+Training saves cleaned historical listings as `artifacts/comparable_cars.csv`. This reuses the same repository `POST /v1/predict` uses internally (its `comparable_cars` field is unchanged), exposed as its own endpoint for a caller that wants comparables without supplying an asking price. Same `make_model`/`year`/`mileage` validation as predict (`extra="forbid"`, same ranges, same whitespace normalization), passed as query parameters:
+
+```bash
+curl "http://localhost:8000/v1/comparables?make_model=Toyota%20Camry&year=2021&mileage=80000"
+```
+
+```json
+{
+  "trace_id": "...",
+  "data": {
+    "comparable_cars": [
+      {"make_model": "Toyota Camry", "year": 2021, "mileage": 78000, "price": 76000}
+    ]
+  }
+}
+```
+
+Returns up to five nearby historical listings by make/model, year, and mileage similarity — **not live marketplace results**. An unknown query parameter, an out-of-range value, or a request before the model is ready get the same `VALIDATION_ERROR` / `NOT_READY` envelopes as `POST /v1/predict`. See `DECISIONS.md` #11.
 
 ## Local setup
 
@@ -192,11 +211,12 @@ The test pyramid includes:
 - API integration tests
 - validation/trace tests
 - UI route smoke test
-- real-model behavioral tests
+- real-model behavioral tests, including explicit invariance/directional checks (`tests/test_behavioural_model.py`)
 - intentional golden-reference test
 - adapter/comparable repository tests
+- `GET /v1/comparables` unit (schema) and integration (TestClient) tests
 
-The real-model gate is marked `real_model` and requires a trained artifact. The behavioral suite checks policy directionality and model input stability. Golden values are never silently regenerated.
+The real-model gate is marked `real_model` and requires a trained artifact; `make fast-test` excludes it so the fast gate stays fast, `make test` and CI's `docker` job run it. The behavioral suite checks policy directionality, model input stability, and (`tests/test_behavioural_model.py`) that an unknown make/model never prices above the training max. One invariant — mileage monotonicity — does **not** hold for the real trained model; it is kept as a documented `xfail`, not hidden. See `docs/model_limitations.md`. Golden values are never silently regenerated.
 
 ```bash
 make test
@@ -230,14 +250,31 @@ publish to GHCR on main only, tagged by commit SHA
 
 No `latest` tag is published. The `docker` and `publish` jobs train from the committed `data/raw/saudi_used_cars.csv` and need no repository secrets to run.
 
+Current CI evidence (run URL, commit SHA, GHCR image link, per-job status) is recorded in `docs/ci_evidence.md` after every audited push, rather than only claimed here.
+
+### Branch protection
+
+`main` is protected via `gh api repos/taCSif/CarDeal-Taif-SDAIA/branches/main/protection`:
+
+- Required status checks before merge: `quality`, `docker`, `publish` (strict — must be up to date with `main`).
+- Force pushes and branch deletion are disabled.
+
+**Required PR review is intentionally not enabled.** This is a solo-maintainer repository with no second collaborator; GitHub does not count a PR author's own approval, so a "1 approving review" rule would be permanently unsatisfiable and would only ever get bypassed by an admin, which is worse than not claiming it. `enforce_admins` is left off so the owner can still push directly for exactly that reason — a real, documented trade-off, not an oversight. Adding a second maintainer and turning `required_pull_request_reviews` (with `required_approving_review_count: 1`) plus `enforce_admins: true` back on is the natural next step and is one `gh api -X PUT` call away; the exact JSON body used is in `scripts/verify_protection.sh` and this repo's commit history.
+
+Verify the current state at any time:
+
+```bash
+bash scripts/verify_protection.sh   # exits non-zero and prints the gap if protection is missing/weaker than expected
+```
+
 ## Security / configuration
 
 Configuration is typed with Pydantic Settings and unknown environment variables fail fast. Secrets are not stored in source code. Logs are structured JSON and correlate requests with `X-Trace-ID`; they do not log the vehicle payload.
 
 ## Benchmarks
 
-`BENCHMARKS.md` contains only measurements actually observed in the current environment or CI. Unmeasured Docker/model-release numbers are explicitly marked as such rather than fabricated.
+`BENCHMARKS.md` contains only measurements actually observed in the current environment or CI, produced by `scripts/bench.sh` (image size, top Docker layers, `make fast-test` / `make test` timing). Unmeasured or environment-limited numbers are explicitly marked as such rather than fabricated.
 
 ## Engineering decisions
 
-See `DECISIONS.md` for the five-plus key decisions covering the regression/policy split, four-input UX contract, model boundary, lifecycle, data quality, persistence, comparables, and golden references.
+See `DECISIONS.md` for the 12 decisions covering the regression/policy split, four-input UX contract, model boundary, lifecycle, data quality, persistence, comparables (embedded and as `GET /v1/comparables`), golden references, and the documented model limitation.
