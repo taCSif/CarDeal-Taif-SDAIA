@@ -257,9 +257,10 @@ Current CI evidence (run URL, commit SHA, GHCR image link, per-job status) is re
 `main` is protected via `gh api repos/taCSif/CarDeal-Taif-SDAIA/branches/main/protection`:
 
 - Required status checks before merge: `quality`, `docker`, `publish` (strict — must be up to date with `main`).
+- Non-admin changes must go through a pull request (`required_pull_request_reviews` is set).
 - Force pushes and branch deletion are disabled.
 
-**Required PR review is intentionally not enabled.** This is a solo-maintainer repository with no second collaborator; GitHub does not count a PR author's own approval, so a "1 approving review" rule would be permanently unsatisfiable and would only ever get bypassed by an admin, which is worse than not claiming it. `enforce_admins` is left off so the owner can still push directly for exactly that reason — a real, documented trade-off, not an oversight. Adding a second maintainer and turning `required_pull_request_reviews` (with `required_approving_review_count: 1`) plus `enforce_admins: true` back on is the natural next step and is one `gh api -X PUT` call away; the exact JSON body used is in `scripts/verify_protection.sh` and this repo's commit history.
+**`required_approving_review_count` is `0` and `enforce_admins` is off, deliberately.** This is a solo-maintainer repository with no second collaborator; GitHub does not count a PR author's own approval, so a "1 approving review" rule would be permanently unsatisfiable for this account and would only ever get bypassed by an admin — which is worse than an honestly-lower number. `enforce_admins: false` lets the owner still push directly (as this audit's own commits did) instead of silently disabling protection to work around it. Adding a second maintainer and setting `required_approving_review_count: 1` plus `enforce_admins: true` is the natural next step and is one `gh api -X PUT` call away; the exact JSON body used is in this repo's commit history (`git log -p -- scripts/verify_protection.sh` and the audit's commits).
 
 Verify the current state at any time:
 
