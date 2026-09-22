@@ -7,7 +7,7 @@ train:
 test:
 	python -m pytest
 fast-test:
-	python -m pytest -m 'not slow' --cov=src/domain --cov=src/service --cov=src/adapters --cov=src/api --cov-branch --cov-report=term-missing --cov-fail-under=80
+	python -m pytest -m 'not slow and not real_model' --cov=src/domain --cov=src/service --cov=src/adapters --cov=src/api --cov-branch --cov-report=term-missing --cov-fail-under=80
 lint:
 	ruff check src tests scripts && mypy src && lint-imports
 image:
