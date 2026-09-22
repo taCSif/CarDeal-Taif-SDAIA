@@ -10,7 +10,5 @@ htmlcov/
 *.pyc
 artifacts/*
 !artifacts/.gitkeep
-data/raw/*
-!data/raw/.gitkeep
 benchmarks/*.txt
 .DS_Store
