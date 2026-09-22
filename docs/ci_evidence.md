@@ -6,16 +6,19 @@ file after any push whose CI result should be the one of record.
 
 ## Latest run
 
-- **Run:** https://github.com/taCSif/CarDeal-Taif-SDAIA/actions/runs/35695153495
-- **Commit SHA:** `d7ad4b07ade45f27fb56c56b550c90c59bd3ead8`
+- **Run:** https://github.com/taCSif/CarDeal-Taif-SDAIA/actions/runs/35695551544
+- **Commit SHA:** `c79b98db78aa985d091a3415c47ca619e5db4bdd`
 - **Trigger:** push to `main`
-- **Result:** all 3 jobs `success` (confirmed via `gh api repos/taCSif/CarDeal-Taif-SDAIA/actions/runs/35695153495/jobs`)
+- **Result:** all 3 jobs `success` (confirmed via `gh api repos/taCSif/CarDeal-Taif-SDAIA/actions/runs/35695551544/jobs`)
+- This commit is docs-only (adding this file itself); the log lines quoted
+  below are from the prior run (`d7ad4b0`, same application code) since it
+  is the run that actually exercised the code these numbers describe.
 
-| Job | Conclusion | Duration | Job ID |
-|---|---|---|---|
-| quality | success | 40s | 106640289574 |
-| docker | success | 1m2s | 106640460576 |
-| publish | success | 1m13s | 106640713188 |
+| Job | Conclusion | Duration |
+|---|---|---|
+| quality | success | see run |
+| docker | success | see run |
+| publish | success | see run |
 
 ## What each job actually did (from the run's own log lines)
 
@@ -40,4 +43,5 @@ file after any push whose CI result should be the one of record.
 | [35681278490](https://github.com/taCSif/CarDeal-Taif-SDAIA/actions/runs/35681278490) | `95170b9` | failure | GHCR tag rejected: repo name has uppercase letters |
 | [35681522558](https://github.com/taCSif/CarDeal-Taif-SDAIA/actions/runs/35681522558) | `808bff1` | success | first fully green run |
 | [35684411581](https://github.com/taCSif/CarDeal-Taif-SDAIA/actions/runs/35684411581) | `6356a28` | success | behavioural tests + comparables endpoint added |
-| **35695153495** | **`d7ad4b0`** | **success** | **current — this audit's final state** |
+| [35695153495](https://github.com/taCSif/CarDeal-Taif-SDAIA/actions/runs/35695153495) | `d7ad4b0` | success | bench script + benchmarks recorded; source of the log lines quoted above |
+| **35695551544** | **`c79b98d`** | **success** | **current — this audit's final state (docs-only commit)** |
