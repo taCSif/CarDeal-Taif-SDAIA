@@ -40,7 +40,7 @@ jobs:
       - name: Train release model
         run: python scripts/train.py
       - name: Run real-model behavior and golden tests
-        run: python -m pytest -m real_model
+        run: python -m pytest -m real_model --no-cov
       - name: Build image
         run: docker build -t ghcr.io/${{ github.repository }}:${{ github.sha }} .
       - name: Start container
