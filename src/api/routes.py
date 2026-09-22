@@ -20,6 +20,11 @@ router = APIRouter()
 STATIC_DIR = Path(__file__).parent / "static"
 
 
+# Shared readiness gate for every endpoint that needs a working model: if
+# startup (see create_app's lifespan below) has not finished successfully,
+# app.state.predict_service stays None and every dependent request gets a
+# 503 with the same NOT_READY envelope /ready itself returns, instead of an
+# AttributeError or a stale/partial service.
 def get_service(request: Request) -> PredictService:
     service: PredictService | None = getattr(request.app.state, "predict_service", None)
     if service is None:
@@ -49,6 +54,9 @@ def ready(request: Request) -> dict[str, object]:
 
 @router.post("/v1/predict")
 def predict(payload: PredictRequest, service: ServiceDependency) -> dict[str, object]:
+    # payload has already passed PredictRequest's validation (extra="forbid",
+    # field ranges, make_model normalization) by the time FastAPI calls this
+    # function; asking_price is used only here, after the estimate exists.
     vehicle = Vehicle(
         make_model=payload.make_model,
         year=payload.year,
@@ -69,6 +77,11 @@ def predict(payload: PredictRequest, service: ServiceDependency) -> dict[str, ob
 def comparables(
     query: Annotated[ComparablesQuery, Query()], service: ServiceDependency
 ) -> dict[str, object]:
+    # Query() on a pydantic model applies ComparablesQuery's own validation
+    # (same extra="forbid" and ranges as PredictRequest) to the query string;
+    # a failure here raises FastAPI's RequestValidationError, which
+    # validation_error_handler turns into the same envelope POST /v1/predict
+    # uses, so both endpoints reject bad input identically.
     vehicle = Vehicle(make_model=query.make_model, year=query.year, mileage=query.mileage)
     cars = service.comparables(vehicle)
     data = {"comparable_cars": [car.__dict__ for car in cars]}
@@ -79,6 +92,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     configure_logging(settings.log_level)
 
+    # FastAPI lifespan: everything before `yield` runs once at startup,
+    # everything after runs once at shutdown. The model is loaded and warmed
+    # up here — never lazily on the first request and never at import time —
+    # so that a slow or failed load is visible as a 503 from /ready rather
+    # than an unpredictable delay or crash on a user's first request.
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.ready = False
@@ -97,6 +115,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.predict_service = service
             app.state.ready = True
         except Exception:
+            # A missing/corrupt model artifact or an unreachable database
+            # must not crash the process: the app stays alive but unready
+            # (app.state.ready stays False), so /health still reports ok
+            # while /ready and every model-backed endpoint report 503.
             import logging
             logging.getLogger("deal_checker").exception("startup_not_ready")
         yield

@@ -30,6 +30,9 @@ class ComparableCarsRepository:
         if df.empty or limit <= 0:
             return []
 
+        # Prefer exact make/model matches over the whole dataset, but only
+        # when there are enough of them to fill the request; otherwise fall
+        # back to ranking every row so the caller still gets `limit` results.
         candidates = df.copy()
         target = vehicle.make_model.casefold()
         make_model_cf = candidates["Make_Model"].astype(str).str.casefold()
@@ -37,6 +40,11 @@ class ComparableCarsRepository:
         pool = exact if len(exact) >= limit else candidates
         pool = pool.copy()
         pool_make_model_cf = pool["Make_Model"].astype(str).str.casefold()
+        # Simple weighted-distance ranking: a year difference matters more
+        # than an equivalent-magnitude mileage difference (hence the /100_000
+        # scale-down and *3 weight), and any make/model mismatch is penalized
+        # heavily (+10) so exact matches always outrank near-matches once the
+        # pool falls back to the full dataset above.
         pool["_distance"] = (
             (pool["Year"] - vehicle.year).abs() * 3
             + (pool["Mileage"] - vehicle.mileage).abs() / 100_000
@@ -55,7 +63,13 @@ class ComparableCarsRepository:
 
 
 class PostgresAuditRepository:
-    """Minimal audit sink; stores no full vehicle request."""
+    """Minimal audit sink; stores no full vehicle request.
+
+    Only trace_id, model_version, the two prices, the decision, and a
+    timestamp are persisted (see DECISIONS.md #7) — deliberately not the
+    make/model, year, or mileage the user submitted, so this table cannot
+    become a record of what any individual asked about.
+    """
 
     def __init__(self, dsn: str) -> None:
         self.dsn = dsn
