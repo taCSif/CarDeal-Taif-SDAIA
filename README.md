@@ -6,6 +6,12 @@ A production-style ML service that estimates a used car's historical Saudi listi
 
 > **Know the price. Spot the deal.**
 
+## Documentation
+
+- [docs/SUBMISSION.md](docs/SUBMISSION.md) — Full detailed submission document
+- [docs/DEMO_REPORT.html](docs/DEMO_REPORT.html) — Demo report (screenshots + explanations)
+- [docs/LEARNING_OUTCOMES.md](docs/LEARNING_OUTCOMES.md) — How the project meets the program objectives
+
 ## How this project meets the program objectives
 
 This project applies the program's goal of moving from *model building* to *production AI software engineering*:
@@ -292,3 +298,11 @@ Configuration is typed with Pydantic Settings and unknown environment variables 
 ## Engineering decisions
 
 See `DECISIONS.md` for the 12 decisions covering the regression/policy split, four-input UX contract, model boundary, lifecycle, data quality, persistence, comparables (embedded and as `GET /v1/comparables`), golden references, and the documented model limitation.
+
+## Acknowledgements
+
+This project was completed as part of the SDA-AIE-113 — Software Engineering Practices for AI Systems training program at SDAIA Academy, under the supervision of Abdullah Khalid AlShahrani.
+
+The portfolio demonstrates the practical application of software engineering practices for AI systems — building a production-style AI/ML service through clean architecture, a well-defined API contract, containerization, a layered automated testing suite, a CI/CD pipeline with branch protection, and safe configuration, secrets, and logging management.
+
+Official SDAIA Academy GitHub: https://github.com/SDAIAAcademy
