@@ -6,6 +6,19 @@ A production-style ML service that estimates a used car's historical Saudi listi
 
 > **Know the price. Spot the deal.**
 
+## How this project meets the program objectives
+
+This project applies the program's goal of moving from *model building* to *production AI software engineering*:
+
+| Program objective | Implementation |
+|---|---|
+| Clean API around the model (FastAPI) | `POST /v1/predict`, `GET /v1/comparables`, `/health`, `/ready`; unified response/error envelope with a `trace_id`; strict Pydantic validation (`extra="forbid"`, value ranges). |
+| Containerisation (Docker) | Multi-stage Dockerfile, non-root user, `/ready` healthcheck, 418 MB image (≤500 MB), `docker-compose` with PostgreSQL gated on `service_healthy`. |
+| Automated tests & CI/CD (GitHub Actions) | quality → tests + coverage gate → Docker build + smoke → publish to GHCR (main only, tagged by commit SHA, no `:latest`); branch protection on `main`. |
+| Clean Architecture & config management | `domain/service/adapters/api` layers; model behind a `Protocol` with dependency injection; `import-linter` enforces the layering; typed Pydantic `Settings` that fail fast. |
+| Code-quality tooling (review, linters, static analysis) | `ruff`, `mypy --strict`, `import-linter`, and `gitleaks` secret scanning, all gating merges via required CI checks. |
+| Containerised model-serving project | End-to-end: training pipeline, FastAPI service, Docker image, CI/CD, and full documentation. |
+
 ## User experience
 
 The public UI intentionally asks for only four things:
